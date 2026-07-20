@@ -708,8 +708,7 @@ async function loadMessages() {
     return;
   }
   try {
-    const { data, error } = await supabase
-      .from('messages').select('*').order('created_at', { ascending: false }).limit(100);
+    const { data, error } = await sb.from('messages').select('*').order('created_at', { ascending: false }).limit(100);
     if (error) throw error;
     if (!data || data.length === 0) {
       list.innerHTML = '<div class="msg-empty">' + t('msgEmpty') + '</div>';
@@ -793,8 +792,7 @@ function hexToRgba(hex) {
 async function loadTheme() {
   if (!supabaseReady) return;
   try {
-    const { data, error } = await supabase
-      .from('settings').select('value').eq('key', 'theme').maybeSingle();
+    const { data, error } = await sb.from('settings').select('value').eq('key', 'theme').maybeSingle();
     if (error) throw error;
     if (data && data.value) applyTheme(data.value);
   } catch (e) { console.warn('Theme load failed:', e); }
