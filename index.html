@@ -2,149 +2,200 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover,minimum-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="theme-color" content="#fbf5f3">
-<title>我们的时间</title>
+<meta name="theme-color" id="meta-theme" content="#fbf5f3">
+<meta name="format-detection" content="telephone=no">
+<title id="page-title">我们的时间</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>♥</text></svg>">
 <style>
-:root{--bg:#fbf5f3;--text:#2d2327;--accent:#d4a0a7;--timer-color:#2d2327;--heart-color:#d4a0a7;--card-bg:rgba(255,255,255,0.72);--card-shadow:0 8px 32px rgba(0,0,0,0.06);--font:-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Helvetica Neue','PingFang SC','Noto Sans SC',sans-serif}
+:root{--bg:#fbf5f3;--text:#2d2327;--accent:#d4a0a7;--timer-color:#2d2327;--heart-color:#d4a0a7;--card-bg:rgba(255,255,255,0.75);--card-shadow:0 8px 40px rgba(0,0,0,0.07);--font:-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Helvetica Neue','PingFang SC','Noto Sans SC',sans-serif}
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-html,body{height:100%;overflow:hidden}
-body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;display:flex;align-items:center;justify-content:center;transition:background-color .6s ease,color .6s ease;user-select:none}
-#app{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center}
+html,body{height:100%;overflow:hidden;-webkit-overflow-scrolling:touch}
+body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;display:flex;align-items:center;justify-content:center;transition:background-color .8s cubic-bezier(.25,.46,.45,.94),color .8s ease;user-select:none;-webkit-tap-highlight-color:transparent}
+
+/* ── Ambient gradient overlay ── */
+#ambient-glow{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.45;transition:opacity 1s ease}
+#ambient-glow::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 40% at 30% 0%,rgba(212,160,167,0.12) 0%,transparent 70%),radial-gradient(ellipse 60% 50% at 80% 30%,rgba(212,160,167,0.08) 0%,transparent 60%),radial-gradient(ellipse 50% 40% at 10% 70%,rgba(212,160,167,0.06) 0%,transparent 50%);animation:ambientPulse 10s ease-in-out infinite alternate}
+#ambient-glow::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 35% at 70% 0%,rgba(212,160,167,0.06) 0%,transparent 60%);animation:ambientPulse2 14s ease-in-out infinite alternate 2s}
+@keyframes ambientPulse{0%{opacity:.5;transform:scale(1)}100%{opacity:1;transform:scale(1.02)}}
+@keyframes ambientPulse2{0%{opacity:.4;transform:scale(1)}100%{opacity:.9;transform:scale(1.03)}}
+
+/* ── Particles ── */
+#particles{position:fixed;inset:0;z-index:1;pointer-events:none;overflow:hidden}
+.particle{position:absolute;pointer-events:none;font-size:clamp(6px,1.5vw,12px);opacity:0;animation:floatUp linear infinite;will-change:transform,opacity}
+@keyframes floatUp{0%{transform:translateY(calc(100vh + 20px)) translateX(0) rotate(0deg);opacity:0}8%{opacity:.12}25%{opacity:.08}60%{opacity:.05}92%{opacity:.1}100%{transform:translateY(-20px) translateX(var(--drift)) rotate(calc(var(--spin) * 1deg));opacity:0}}
+
+/* ── App ── */
+#app{position:relative;z-index:2;width:100%;height:100%;display:flex;align-items:center;justify-content:center;animation:fadeIn 1.2s cubic-bezier(.22,1,.36,1)}
+@keyframes fadeIn{0%{opacity:0;transform:scale(.97)}100%{opacity:1;transform:scale(1)}}
 
 /* ── Timer ── */
-#timer-wrap{text-align:center;padding:20px;transition:opacity .4s ease}
-#timer{font-size:clamp(1.8rem,7.5vw,5.5rem);font-weight:200;letter-spacing:.02em;color:var(--timer-color);transition:color .6s ease;line-height:1.2;display:flex;align-items:baseline;justify-content:center;flex-wrap:wrap;gap:0}
-#timer .num{font-variant-numeric:tabular-nums;min-width:2ch;display:inline-block;text-align:right}
-#timer .num.hours{min-width:3ch}
-#timer .unit{font-size:.35em;font-weight:300;opacity:.5;margin:0 .15em 0 .06em}
-#timer .sep{font-size:.35em;font-weight:200;opacity:.3;margin:0 .08em}
-#subtitle{font-size:clamp(.75rem,2vw,1rem);font-weight:300;opacity:.35;margin-top:clamp(.6rem,2vh,1.2rem);letter-spacing:.04em;transition:color .6s ease;color:var(--text)}
-#subtitle .heart{display:inline-block;color:var(--heart-color);animation:heartbeat 2s ease-in-out infinite;transition:color .6s ease}
-@keyframes heartbeat{0%,100%{transform:scale(1)}14%{transform:scale(1.25)}28%{transform:scale(1)}42%{transform:scale(1.2)}70%{transform:scale(1)}}
+#timer-wrap{text-align:center;padding:16px;transition:opacity .5s ease}
+#timer{font-size:clamp(1.6rem,7vw,5rem);font-weight:200;letter-spacing:.015em;color:var(--timer-color);transition:color .8s ease;line-height:1.15;display:flex;align-items:baseline;justify-content:center;flex-wrap:wrap;gap:0}
+#timer .num{font-variant-numeric:tabular-nums;display:inline-block;text-align:right;transition:transform .12s cubic-bezier(.34,1.56,.64,1),opacity .12s ease;position:relative}
+#timer .num.change{transform:scale(1.06);opacity:.85}
+#timer .num.hours{min-width:3ch;font-weight:200}
+#timer .num.mins,.num.secs{min-width:2ch}
+#timer .unit{font-size:.35em;font-weight:300;opacity:.45;margin:0 .12em 0 .04em;letter-spacing:.02em}
+#timer .sep{font-size:.35em;font-weight:200;opacity:.25;margin:0 .06em}
+#subtitle{font-size:clamp(.72rem,1.8vw,.95rem);font-weight:300;opacity:.35;margin-top:clamp(.5rem,1.8vh,1.1rem);letter-spacing:.05em;transition:color .8s ease;color:var(--text)}
+#subtitle .heart{display:inline-block;color:var(--heart-color);animation:heartbeat 2s ease-in-out infinite;transition:color .8s ease;filter:drop-shadow(0 0 6px var(--heart-color));opacity:.85}
+@keyframes heartbeat{0%,100%{transform:scale(1)}14%{transform:scale(1.3)}28%{transform:scale(1)}42%{transform:scale(1.22)}70%{transform:scale(1)}}
 
-/* ── Menu Button ── */
-#menu-btn{position:fixed;bottom:clamp(20px,4vh,40px);right:clamp(16px,3vw,40px);z-index:50;width:44px;height:44px;border-radius:50%;background:var(--card-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(0,0,0,.04);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:opacity .3s,transform .2s,background .4s;opacity:.35;color:var(--text)}
-#menu-btn:hover{opacity:.7;transform:scale(1.06)}
-#menu-btn:active{transform:scale(.94)}
+/* ── Language / Menu buttons ── */
+#lang-btn{position:fixed;top:clamp(12px,3vh,24px);right:clamp(12px,3vw,24px);z-index:40;padding:5px 12px;border-radius:20px;background:var(--card-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(0,0,0,.04);cursor:pointer;font-size:.72rem;font-family:var(--font);color:var(--text);font-weight:450;letter-spacing:.03em;transition:opacity .3s,transform .2s,background .6s;opacity:.4}
+#lang-btn:hover{opacity:.7;transform:scale(1.04)}
+#lang-btn:active{transform:scale(.95)}
+#menu-btn{position:fixed;bottom:clamp(16px,3.5vh,34px);right:clamp(14px,2.5vw,34px);z-index:40;width:44px;height:44px;border-radius:50%;background:var(--card-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(0,0,0,.04);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:opacity .3s,transform .2s,background .6s;opacity:.3;color:var(--text)}
+#menu-btn:hover{opacity:.6;transform:scale(1.06)}
+#menu-btn:active{transform:scale(.92)}
 #menu-btn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
 
 /* ── Overlay ── */
-.overlay{position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.2);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);opacity:0;transition:opacity .35s ease}
+.overlay{position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.18);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);opacity:0;transition:opacity .35s ease}
 .overlay.active{display:flex;opacity:1}
-.overlay .panel{background:var(--card-bg);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);border-radius:20px;box-shadow:var(--card-shadow);width:min(92vw,440px);max-height:80vh;overflow-y:auto;padding:clamp(20px,3vw,32px);transform:translateY(20px) scale(.96);transition:transform .35s cubic-bezier(.22,1,.36,1),background .6s;color:var(--text)}
+.overlay .panel{background:var(--card-bg);backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);border-radius:24px;box-shadow:0 12px 48px rgba(0,0,0,.08),0 0 0 1px rgba(255,255,255,.08) inset;width:min(90vw,420px);max-height:80vh;overflow-y:auto;padding:clamp(18px,2.8vw,30px);transform:translateY(24px) scale(.96);transition:transform .4s cubic-bezier(.22,1,.36,1),background .6s;color:var(--text);-webkit-overflow-scrolling:touch}
 .overlay.active .panel{transform:translateY(0) scale(1)}
-.panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
-.panel-header h2{font-size:1.15rem;font-weight:500;letter-spacing:.01em}
-.panel-close{width:32px;height:32px;border:none;background:rgba(0,0,0,.04);border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text);opacity:.5;transition:opacity .2s;font-size:1.1rem}
-.panel-close:hover{opacity:1}
+.panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.panel-header h2{font-size:1.1rem;font-weight:500;letter-spacing:.01em}
+.panel-close{width:32px;height:32px;border:none;background:rgba(0,0,0,.04);border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text);opacity:.45;transition:opacity .2s,transform .15s;font-size:1.05rem}
+.panel-close:hover{opacity:1;transform:scale(1.1)}
+.panel-close:active{transform:scale(.9)}
 .panel::-webkit-scrollbar{width:4px}
-.panel::-webkit-scrollbar-thumb{background:rgba(0,0,0,.1);border-radius:2px}
+.panel::-webkit-scrollbar-thumb{background:rgba(0,0,0,.08);border-radius:2px}
 
-/* ── Menu Panel (grid) ── */
+/* ── Menu Panel ── */
 .menu-grid{display:grid;grid-template-columns:1fr;gap:8px}
-.menu-item{display:flex;align-items:center;gap:14px;padding:14px 16px;border:none;background:rgba(255,255,255,.5);border-radius:14px;cursor:pointer;font-size:.95rem;font-family:var(--font);color:var(--text);transition:background .2s,transform .15s;text-align:left;width:100%}
-.menu-item:hover{background:rgba(255,255,255,.8)}
-.menu-item:active{transform:scale(.98)}
-.menu-item .icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
-.menu-item .icon.days{background:rgba(212,160,167,.2);color:var(--accent)}
-.menu-item .icon.messages{background:rgba(212,160,167,.2);color:var(--accent)}
-.menu-item .icon.theme{background:rgba(212,160,167,.2);color:var(--accent)}
-.menu-item .label{font-weight:450}
-.menu-item .desc{font-size:.78rem;opacity:.45;margin-top:2px}
+.menu-item{display:flex;align-items:center;gap:14px;padding:14px 16px;border:none;background:rgba(255,255,255,.45);border-radius:16px;cursor:pointer;font-size:.92rem;font-family:var(--font);color:var(--text);transition:background .2s,transform .15s;text-align:left;width:100%;-webkit-tap-highlight-color:transparent}
+.menu-item:hover{background:rgba(255,255,255,.7)}
+.menu-item:active{transform:scale(.97)}
+.menu-item .icon-wrap{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;background:rgba(212,160,167,.15)}
+.menu-item .icon-wrap .ico{transition:transform .3s ease}
+.menu-item:hover .icon-wrap .ico{transform:scale(1.12)}
+.menu-item .label{font-weight:460;font-size:.93rem}
+.menu-item .desc{font-size:.76rem;opacity:.42;margin-top:2px;line-height:1.3}
 
 /* ── Days Panel ── */
-.days-grid{display:grid;gap:12px}
-.day-card{background:rgba(255,255,255,.5);border-radius:14px;padding:16px 18px;display:flex;align-items:center;justify-content:space-between}
-.day-card .num{font-size:1.6rem;font-weight:200;letter-spacing:-.02em}
-.day-card .label{font-size:.82rem;opacity:.5}
-.day-heart{text-align:center;margin-top:8px;font-size:1.1rem;font-weight:300;color:var(--heart-color);transition:color .6s ease}
+.days-grid{display:grid;gap:10px}
+.day-card{background:rgba(255,255,255,.45);border-radius:16px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;transition:background .2s}
+.day-card .num{font-size:1.5rem;font-weight:200;letter-spacing:-.01em}
+.day-card .label{font-size:.8rem;opacity:.48}
+.day-heart{text-align:center;margin-top:10px;font-size:1.05rem;font-weight:300;color:var(--heart-color);transition:color .8s ease;letter-spacing:.02em}
 
 /* ── Messages Panel ── */
-.msg-list{display:flex;flex-direction:column;gap:12px;margin-bottom:16px;max-height:50vh;overflow-y:auto}
-.msg-list::-webkit-scrollbar{width:4px}
-.msg-list::-webkit-scrollbar-thumb{background:rgba(0,0,0,.08);border-radius:2px}
-.msg-empty{text-align:center;padding:40px 20px;opacity:.4;font-size:.9rem;font-weight:300;line-height:1.6}
-.msg-card{background:rgba(255,255,255,.55);border-radius:14px;padding:14px 16px;transition:background .2s}
-.msg-card .date{font-size:.72rem;opacity:.4;margin-bottom:6px}
-.msg-card .content{font-size:.9rem;line-height:1.5;word-break:break-word}
-.msg-card img{max-width:100%;border-radius:10px;margin-top:8px;display:block}
+.msg-list{display:flex;flex-direction:column;gap:10px;margin-bottom:14px;max-height:48vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.msg-list::-webkit-scrollbar{width:3px}
+.msg-list::-webkit-scrollbar-thumb{background:rgba(0,0,0,.06);border-radius:2px}
+.msg-empty{text-align:center;padding:36px 16px;opacity:.38;font-size:.85rem;font-weight:300;line-height:1.6}
+.msg-card{background:rgba(255,255,255,.5);border-radius:16px;padding:12px 14px;transition:background .2s}
+.msg-card .date{font-size:.7rem;opacity:.38;margin-bottom:5px}
+.msg-card .content{font-size:.87rem;line-height:1.5;word-break:break-word}
+.msg-card img{max-width:100%;border-radius:12px;margin-top:7px;display:block}
 .msg-form{display:flex;flex-direction:column;gap:10px}
-.msg-form textarea{width:100%;min-height:72px;padding:12px 14px;border:1px solid rgba(0,0,0,.06);border-radius:12px;font-size:.9rem;font-family:var(--font);background:rgba(255,255,255,.6);resize:vertical;color:var(--text);transition:border-color .2s}
+.msg-form textarea{width:100%;min-height:68px;padding:11px 13px;border:1px solid rgba(0,0,0,.05);border-radius:14px;font-size:.87rem;font-family:var(--font);background:rgba(255,255,255,.55);resize:vertical;color:var(--text);transition:border-color .25s}
 .msg-form textarea:focus{outline:none;border-color:var(--accent)}
-.msg-form textarea::placeholder{color:var(--text);opacity:.3}
-.msg-form .actions{display:flex;align-items:center;gap:10px}
-.photo-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border:1px solid rgba(0,0,0,.06);border-radius:10px;background:rgba(255,255,255,.5);cursor:pointer;font-size:.82rem;font-family:var(--font);color:var(--text);transition:background .2s}
-.photo-btn:hover{background:rgba(255,255,255,.8)}
+.msg-form textarea::placeholder{color:var(--text);opacity:.28}
+.msg-form .actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.photo-btn{display:inline-flex;align-items:center;gap:5px;padding:7px 12px;border:1px solid rgba(0,0,0,.05);border-radius:12px;background:rgba(255,255,255,.45);cursor:pointer;font-size:.8rem;font-family:var(--font);color:var(--text);transition:background .2s}
+.photo-btn:hover{background:rgba(255,255,255,.7)}
 .photo-btn input[type=file]{display:none}
-.photo-preview{display:flex;align-items:center;gap:8px;padding:6px 10px;background:rgba(255,255,255,.4);border-radius:8px;font-size:.78rem;opacity:.6}
-.photo-preview .remove{cursor:pointer;opacity:.5;font-size:.9rem;margin-left:4px}
-.submit-btn{margin-left:auto;padding:8px 20px;border:none;border-radius:10px;background:var(--accent);color:#fff;font-size:.85rem;font-family:var(--font);cursor:pointer;font-weight:500;transition:opacity .2s,transform .15s}
+.photo-preview{display:flex;align-items:center;gap:6px;padding:5px 9px;background:rgba(255,255,255,.35);border-radius:10px;font-size:.75rem;opacity:.55}
+.photo-preview .remove{cursor:pointer;opacity:.5;font-size:.85rem;margin-left:3px}
+.submit-btn{margin-left:auto;padding:8px 20px;border:none;border-radius:12px;background:var(--accent);color:#fff;font-size:.82rem;font-family:var(--font);cursor:pointer;font-weight:500;transition:opacity .2s,transform .15s}
 .submit-btn:hover{opacity:.85}
-.submit-btn:active{transform:scale(.97)}
+.submit-btn:active{transform:scale(.96)}
 .submit-btn:disabled{opacity:.4;cursor:not-allowed}
 
 /* ── Theme Panel ── */
-.theme-grid{display:grid;gap:14px}
+.theme-grid{display:grid;gap:12px}
 .theme-row{display:flex;align-items:center;justify-content:space-between}
-.theme-row label{font-size:.88rem;font-weight:430}
-.theme-row input[type=color]{width:40px;height:40px;border:2px solid rgba(0,0,0,.06);border-radius:10px;cursor:pointer;padding:2px;background:none}
+.theme-row label{font-size:.85rem;font-weight:430}
+.theme-row input[type=color]{width:38px;height:38px;border:2px solid rgba(0,0,0,.05);border-radius:12px;cursor:pointer;padding:2px;background:none}
 .theme-row input[type=color]::-webkit-color-swatch-wrapper{padding:0}
-.theme-row input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
-.theme-row select{padding:8px 14px;border:1px solid rgba(0,0,0,.06);border-radius:10px;background:rgba(255,255,255,.6);font-size:.85rem;font-family:var(--font);color:var(--text);cursor:pointer}
-.theme-row select:focus{outline:none;border-color:var(--accent)}
-.theme-actions{display:flex;gap:10px;margin-top:4px}
-.theme-actions button{flex:1;padding:10px;border:none;border-radius:10px;font-size:.85rem;font-family:var(--font);cursor:pointer;font-weight:450;transition:opacity .2s,transform .15s}
+.theme-row input[type=color]::-webkit-color-swatch{border:none;border-radius:8px}
+.theme-actions{display:flex;gap:10px;margin-top:6px}
+.theme-actions button{flex:1;padding:10px;border:none;border-radius:12px;font-size:.82rem;font-family:var(--font);cursor:pointer;font-weight:450;transition:opacity .2s,transform .15s}
 .theme-actions button:active{transform:scale(.97)}
 .btn-save{background:var(--accent);color:#fff}
 .btn-reset{background:rgba(0,0,0,.04);color:var(--text)}
 .btn-save:hover,.btn-reset:hover{opacity:.85}
-.theme-status{text-align:center;font-size:.78rem;opacity:.5;margin-top:4px;min-height:1.2em;transition:opacity .3s}
+.theme-status{text-align:center;font-size:.75rem;opacity:.48;margin-top:4px;min-height:1.2em;transition:opacity .3s}
 
 /* ── Toast ── */
-.toast{position:fixed;bottom:clamp(80px,12vh,120px);left:50%;transform:translateX(-50%) translateY(20px);background:rgba(0,0,0,.75);backdrop-filter:blur(16px);color:#fff;padding:10px 24px;border-radius:12px;font-size:.82rem;font-weight:400;opacity:0;transition:opacity .35s,transform .35s;z-index:200;pointer-events:none;white-space:nowrap}
+.toast{position:fixed;bottom:clamp(70px,10vh,100px);left:50%;transform:translateX(-50%) translateY(16px);background:rgba(0,0,0,.72);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);color:#fff;padding:9px 22px;border-radius:14px;font-size:.8rem;font-weight:400;opacity:0;transition:opacity .35s,transform .35s cubic-bezier(.22,1,.36,1);z-index:200;pointer-events:none;white-space:nowrap;max-width:80vw}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
 /* ── Responsive ── */
-@media(max-width:480px){
-  #menu-btn{bottom:clamp(12px,3vh,20px);right:clamp(12px,3vw,20px);width:40px;height:40px}
-  .overlay .panel{border-radius:16px;padding:18px;max-height:85vh;width:94vw}
-  .day-card .num{font-size:1.3rem}
+@media(max-width:400px){
+  #timer{font-size:clamp(1.3rem,6vw,1.8rem)}
+  #timer .unit{font-size:.32em} #timer .sep{font-size:.32em}
+  #subtitle{font-size:.65rem}
+  #menu-btn{width:38px;height:38px;bottom:12px;right:12px;opacity:.4}
+  #menu-btn svg{width:17px;height:17px}
+  #lang-btn{top:12px;right:12px;padding:4px 10px;font-size:.65rem;opacity:.45}
+  .overlay .panel{border-radius:18px;padding:16px;width:92vw;max-height:85vh}
+  .day-card .num{font-size:1.2rem}
+  .msg-card .content{font-size:.82rem}
+  .panel-header h2{font-size:1rem}
+}
+@media(min-width:401px)and(max-width:767px){
+  .overlay .panel{max-height:82vh}
 }
 @media(min-width:768px){
-  #timer{font-size:clamp(3rem,6vw,6rem)}
+  #timer{font-size:clamp(2.8rem,5.5vw,5.5rem)}
+  #subtitle{font-size:.95rem}
+  .overlay .panel{padding:28px 30px}
 }
+@media(min-width:1024px){
+  #timer{font-size:clamp(3rem,4.5vw,6rem)}
+}
+/* iPhone notch / dynamic island safety */
+@supports(padding:max(0px)){
+  #lang-btn{top:max(12px,env(safe-area-inset-top,12px));right:max(12px,env(safe-area-inset-right,12px))}
+  #menu-btn{bottom:max(16px,env(safe-area-inset-bottom,16px));right:max(14px,env(safe-area-inset-right,14px))}
+  .overlay .panel{padding-bottom:max(18px,env(safe-area-inset-bottom,18px))}
+}
+
+/* ── Dark Mode ── */
 @media(prefers-color-scheme:dark){
-  :root{--bg:#1c1a1d;--text:#e8e0e4;--accent:#c4909a;--timer-color:#e8e0e4;--heart-color:#c4909a;--card-bg:rgba(40,38,42,.82);--card-shadow:0 8px 32px rgba(0,0,0,.25)}
-  .menu-item,.day-card,.msg-card{background:rgba(255,255,255,.06)}
-  .panel-close{background:rgba(255,255,255,.08)}
-  .msg-form textarea,.theme-row select{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.08);color:var(--text)}
-  .msg-form textarea::placeholder{color:var(--text);opacity:.25}
-  .photo-btn,.submit-btn{background:var(--accent);color:#fff}
-  .photo-btn{background:rgba(255,255,255,.1)}
-  .btn-reset{background:rgba(255,255,255,.08);color:var(--text)}
-  #menu-btn{background:var(--card-bg);border-color:rgba(255,255,255,.06)}
+  :root{--bg:#1c1a1d;--text:#e8e0e4;--accent:#c4909a;--timer-color:#e8e0e4;--heart-color:#c4909a;--card-bg:rgba(38,36,40,.82);--card-shadow:0 8px 40px rgba(0,0,0,.3)}
+  #ambient-glow::before{background:radial-gradient(ellipse 80% 40% at 30% 0%,rgba(196,144,154,0.08) 0%,transparent 70%),radial-gradient(ellipse 60% 50% at 80% 30%,rgba(196,144,154,0.05) 0%,transparent 60%);opacity:.6}
+  #ambient-glow::after{background:radial-gradient(ellipse 60% 35% at 70% 0%,rgba(196,144,154,0.04) 0%,transparent 60%)}
+  .menu-item,.day-card,.msg-card{background:rgba(255,255,255,.05)}
+  .panel-close{background:rgba(255,255,255,.06)}
+  .msg-form textarea{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.06);color:var(--text)}
+  .msg-form textarea::placeholder{color:var(--text);opacity:.2}
+  .submit-btn{background:var(--accent);color:#fff}
+  .photo-btn{background:rgba(255,255,255,.08)}
+  .btn-reset{background:rgba(255,255,255,.06);color:var(--text)}
+  #menu-btn,#lang-btn{background:var(--card-bg);border-color:rgba(255,255,255,.04)}
 }
 </style>
 </head>
 <body>
+
+<div id="ambient-glow"></div>
+<div id="particles"></div>
+
 <div id="app">
 
   <!-- ═══ Timer ═══ -->
   <div id="timer-wrap">
     <div id="timer">
       <span class="num hours" id="h">000</span><span class="unit">h</span><span class="sep">，</span>
-      <span class="num" id="m">00</span><span class="unit">min</span><span class="sep">，</span>
-      <span class="num" id="s">00</span><span class="unit">s</span>
+      <span class="num mins" id="m">00</span><span class="unit">min</span><span class="sep">，</span>
+      <span class="num secs" id="s">00</span><span class="unit">s</span>
     </div>
-    <div id="subtitle"><span class="heart">♥</span> 2026.07.11 00:24 至今</div>
+    <div id="subtitle"><span class="heart">♥</span> <span id="sub-text">2026.07.11 00:24 至今</span></div>
   </div>
 
+  <!-- ═══ Language Toggle ═══ -->
+  <button id="lang-btn" onclick="toggleLang()">VN</button>
+
   <!-- ═══ Menu Button ═══ -->
-  <button id="menu-btn" aria-label="菜单" onclick="openPanel('menu')">
+  <button id="menu-btn" aria-label="Menu" onclick="openPanel('menu')">
     <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
   </button>
 
@@ -152,21 +203,21 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
   <div class="overlay" id="menu-panel">
     <div class="panel">
       <div class="panel-header">
-        <h2>菜单</h2>
+        <h2 id="menu-title">菜单</h2>
         <button class="panel-close" onclick="closePanel('menu')">✕</button>
       </div>
       <div class="menu-grid">
         <button class="menu-item" onclick="closePanel('menu');openPanel('days')">
-          <span class="icon days">📅</span>
-          <div><div class="label">天数换算</div><div class="desc">看看我们已经相识了多少天</div></div>
+          <span class="icon-wrap"><span class="ico">📅</span></span>
+          <div><div class="label" id="m-days-label">天数换算</div><div class="desc" id="m-days-desc">看看我们已经相识了多少天</div></div>
         </button>
         <button class="menu-item" onclick="closePanel('menu');openPanel('messages')">
-          <span class="icon messages">💬</span>
-          <div><div class="label">留言板</div><div class="desc">留下想说的话和照片</div></div>
+          <span class="icon-wrap"><span class="ico">💬</span></span>
+          <div><div class="label" id="m-msg-label">留言板</div><div class="desc" id="m-msg-desc">留下想说的话和照片</div></div>
         </button>
         <button class="menu-item" onclick="closePanel('menu');openPanel('theme')">
-          <span class="icon theme">🎨</span>
-          <div><div class="label">主题定制</div><div class="desc">自定义这个页面的外观</div></div>
+          <span class="icon-wrap"><span class="ico">🎨</span></span>
+          <div><div class="label" id="m-theme-label">主题定制</div><div class="desc" id="m-theme-desc">自定义这个页面的外观</div></div>
         </button>
       </div>
     </div>
@@ -176,16 +227,16 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
   <div class="overlay" id="days-panel">
     <div class="panel">
       <div class="panel-header">
-        <h2>天数换算</h2>
+        <h2 id="d-title">天数换算</h2>
         <button class="panel-close" onclick="closePanel('days')">✕</button>
       </div>
       <div class="days-grid">
-        <div class="day-card"><span class="label">总天数</span><span class="num" id="d-total">—</span></div>
-        <div class="day-card"><span class="label">周 / 天</span><span class="num" id="d-weeks">—</span></div>
-        <div class="day-card"><span class="label">月 / 天</span><span class="num" id="d-months">—</span></div>
-        <div class="day-card"><span class="label">年 / 天</span><span class="num" id="d-years">—</span></div>
+        <div class="day-card"><span class="label" id="d-total-label">总天数</span><span class="num" id="d-total">—</span></div>
+        <div class="day-card"><span class="label" id="d-weeks-label">周 / 天</span><span class="num" id="d-weeks">—</span></div>
+        <div class="day-card"><span class="label" id="d-months-label">月 / 天</span><span class="num" id="d-months">—</span></div>
+        <div class="day-card"><span class="label" id="d-years-label">年 / 天</span><span class="num" id="d-years">—</span></div>
       </div>
-      <div class="day-heart" id="day-heart-text">♥ 与你相识的第 <span id="d-heart-num">—</span> 天</div>
+      <div class="day-heart">♥ <span id="d-heart-pre">与你相识的第</span> <span id="d-heart-num">—</span> <span id="d-heart-post">天</span></div>
     </div>
   </div>
 
@@ -193,24 +244,24 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
   <div class="overlay" id="messages-panel">
     <div class="panel">
       <div class="panel-header">
-        <h2>留言板</h2>
+        <h2 id="msg-title">留言板</h2>
         <button class="panel-close" onclick="closePanel('messages')">✕</button>
       </div>
       <div class="msg-list" id="msg-list">
-        <div class="msg-empty">还没有留言<br>来写下第一条吧 💕</div>
+        <div class="msg-empty" id="msg-empty">还没有留言<br>来写下第一条吧 💕</div>
       </div>
       <div class="msg-form">
         <textarea id="msg-input" placeholder="写下你想说的话…" maxlength="2000"></textarea>
         <div class="actions">
           <label class="photo-btn">
-            <span>📷</span> 添加照片
+            <span>📷</span> <span id="photo-btn-text">添加照片</span>
             <input type="file" accept="image/*" id="photo-input" onchange="handlePhotoSelect(event)">
           </label>
           <div class="photo-preview" id="photo-preview" style="display:none">
             <span id="photo-name"></span>
             <span class="remove" onclick="clearPhoto()">✕</span>
           </div>
-          <button class="submit-btn" id="msg-submit" onclick="submitMessage()">发送</button>
+          <button class="submit-btn" id="msg-submit" onclick="submitMessage()"><span id="submit-text">发送</span></button>
         </div>
       </div>
     </div>
@@ -220,19 +271,19 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
   <div class="overlay" id="theme-panel">
     <div class="panel">
       <div class="panel-header">
-        <h2>主题定制</h2>
+        <h2 id="t-title">主题定制</h2>
         <button class="panel-close" onclick="closePanel('theme')">✕</button>
       </div>
       <div class="theme-grid">
-        <div class="theme-row"><label>背景色</label><input type="color" id="t-bg" value="#fbf5f3"></div>
-        <div class="theme-row"><label>文字色</label><input type="color" id="t-text" value="#2d2327"></div>
-        <div class="theme-row"><label>强调色</label><input type="color" id="t-accent" value="#d4a0a7"></div>
-        <div class="theme-row"><label>计时器色</label><input type="color" id="t-timer" value="#2d2327"></div>
-        <div class="theme-row"><label>心形颜色</label><input type="color" id="t-heart" value="#d4a0a7"></div>
+        <div class="theme-row"><label id="t-bg-label">背景色</label><input type="color" id="t-bg" value="#fbf5f3"></div>
+        <div class="theme-row"><label id="t-text-label">文字色</label><input type="color" id="t-text" value="#2d2327"></div>
+        <div class="theme-row"><label id="t-accent-label">强调色</label><input type="color" id="t-accent" value="#d4a0a7"></div>
+        <div class="theme-row"><label id="t-timer-label">计时器色</label><input type="color" id="t-timer" value="#2d2327"></div>
+        <div class="theme-row"><label id="t-heart-label">心形颜色</label><input type="color" id="t-heart" value="#d4a0a7"></div>
       </div>
       <div class="theme-actions">
-        <button class="btn-reset" onclick="resetTheme()">重置默认</button>
-        <button class="btn-save" onclick="saveTheme()">保存主题</button>
+        <button class="btn-reset" onclick="resetTheme()"><span id="t-reset-text">重置默认</span></button>
+        <button class="btn-save" onclick="saveTheme()"><span id="t-save-text">保存主题</span></button>
       </div>
       <div class="theme-status" id="theme-status"></div>
     </div>
@@ -244,50 +295,206 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 
 <script src="https://unpkg.com/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
 <script>
-// ═══════════════════════════════════
-//  Config
-// ═══════════════════════════════════
+// ═══════════════════════════════════════════
+//  i18n — 中文 & Tiếng Việt
+// ═══════════════════════════════════════════
+const LANG = {
+  zh: {
+    title:'我们的时间', langBtn:'VN',
+    sub:'2026.07.11 00:24 至今',
+    menuTitle:'菜单',
+    mDays:'天数换算','mDaysDesc':'看看我们已经相识了多少天',
+    mMessages:'留言板','mMessagesDesc':'留下想说的话和照片',
+    mTheme:'主题定制','mThemeDesc':'自定义这个页面的外观',
+    dTitle:'天数换算','dTotal':'总天数','dWeeks':'周 / 天','dMonths':'月 / 天','dYears':'年 / 天',
+    dHeartPre:'与你相识的第',dHeartPost:'天',
+    msgTitle:'留言板',
+    msgEmpty:'还没有留言<br>来写下第一条吧 💕',
+    msgPlaceholder:'写下你想说的话…',
+    photoBtn:'添加照片',
+    submit:'发送','submitSending':'发送中…',
+    tTitle:'主题定制',
+    tBg:'背景色',tText:'文字色',tAccent:'强调色',tTimer:'计时器色',tHeart:'心形颜色',
+    tReset:'重置默认',tSave:'保存主题',
+    toastSent:'留言已发送 ♥','toastFail':'发送失败，请稍后再试','toastEmpty':'写点什么吧 💭','toastPhoto':'照片太大了，请选小于 5MB 的图片',
+    toastThemeSaved:'主题已更新','toastThemeReset':'已恢复默认主题','toastSaving':'保存中…','toastSaved':'保存成功 ♥',
+    toastConfig:'请先配置 Supabase','toastNoDB':'暂未连接数据库<br>请先配置 Supabase',
+    toastLoadFail:'加载留言失败 🥲'
+  },
+  vi: {
+    title:'Thời gian của chúng mình', langBtn:'中文',
+    sub:'11.07.2026 00:24 đến nay',
+    menuTitle:'Menu',
+    mDays:'Đếm ngày','mDaysDesc':'Xem chúng mình đã bên nhau bao lâu',
+    mMessages:'Lời nhắn','mMessagesDesc':'Gửi lời nhắn và hình ảnh',
+    mTheme:'Tùy chỉnh','mThemeDesc':'Tùy chỉnh giao diện',
+    dTitle:'Đếm ngày','dTotal':'Tổng ngày','dWeeks':'Tuần / Ngày','dMonths':'Tháng / Ngày','dYears':'Năm / Ngày',
+    dHeartPre:'Ngày thứ',dHeartPost:'bên nhau ♥',
+    msgTitle:'Lời nhắn',
+    msgEmpty:'Chưa có lời nhắn nào<br>Hãy viết điều đầu tiên nhé 💕',
+    msgPlaceholder:'Viết điều bạn muốn nói…',
+    photoBtn:'Thêm ảnh',
+    submit:'Gửi','submitSending':'Đang gửi…',
+    tTitle:'Tùy chỉnh',
+    tBg:'Màu nền',tText:'Màu chữ',tAccent:'Màu nhấn',tTimer:'Màu đồng hồ',tHeart:'Màu tim',
+    tReset:'Mặc định',tSave:'Lưu',
+    toastSent:'Đã gửi ♥','toastFail':'Gửi thất bại, thử lại sau','toastEmpty':'Viết gì đó đi 💭','toastPhoto':'Ảnh quá lớn, hãy chọn ảnh dưới 5MB',
+    toastThemeSaved:'Đã cập nhật','toastThemeReset':'Đã về mặc định','toastSaving':'Đang lưu…','toastSaved':'Đã lưu ♥',
+    toastConfig:'Vui lòng cấu hình Supabase','toastNoDB':'Chưa kết nối database<br>Vui lòng cấu hình Supabase',
+    toastLoadFail:'Tải lời nhắn thất bại 🥲'
+  }
+};
+
+let currentLang = 'zh';
+
+function t(key) {
+  return LANG[currentLang][key] || LANG.zh[key] || key;
+}
+
+function applyLang(lang) {
+  currentLang = lang;
+  document.documentElement.lang = lang === 'vi' ? 'vi' : 'zh-CN';
+  document.getElementById('page-title').textContent = t('title');
+  document.getElementById('lang-btn').textContent = t('langBtn');
+  document.getElementById('sub-text').textContent = t('sub');
+
+  // Menu
+  document.getElementById('menu-title').textContent = t('menuTitle');
+  document.getElementById('m-days-label').textContent = t('mDays');
+  document.getElementById('m-days-desc').textContent = t('mDaysDesc');
+  document.getElementById('m-msg-label').textContent = t('mMessages');
+  document.getElementById('m-msg-desc').textContent = t('mMessagesDesc');
+  document.getElementById('m-theme-label').textContent = t('mTheme');
+  document.getElementById('m-theme-desc').textContent = t('mThemeDesc');
+
+  // Days
+  document.getElementById('d-title').textContent = t('dTitle');
+  document.getElementById('d-total-label').textContent = t('dTotal');
+  document.getElementById('d-weeks-label').textContent = t('dWeeks');
+  document.getElementById('d-months-label').textContent = t('dMonths');
+  document.getElementById('d-years-label').textContent = t('dYears');
+  document.getElementById('d-heart-pre').textContent = t('dHeartPre');
+  document.getElementById('d-heart-post').textContent = t('dHeartPost');
+
+  // Messages
+  document.getElementById('msg-title').textContent = t('msgTitle');
+  document.getElementById('msg-empty').innerHTML = t('msgEmpty');
+  document.getElementById('msg-input').placeholder = t('msgPlaceholder');
+  document.getElementById('photo-btn-text').textContent = t('photoBtn');
+  document.getElementById('submit-text').textContent = t('submit');
+
+  // Theme
+  document.getElementById('t-title').textContent = t('tTitle');
+  document.getElementById('t-bg-label').textContent = t('tBg');
+  document.getElementById('t-text-label').textContent = t('tText');
+  document.getElementById('t-accent-label').textContent = t('tAccent');
+  document.getElementById('t-timer-label').textContent = t('tTimer');
+  document.getElementById('t-heart-label').textContent = t('tHeart');
+  document.getElementById('t-reset-text').textContent = t('tReset');
+  document.getElementById('t-save-text').textContent = t('tSave');
+}
+
+function toggleLang() {
+  const next = currentLang === 'zh' ? 'vi' : 'zh';
+  applyLang(next);
+  localStorage.setItem('lang', next);
+}
+
+// Auto-detect or restore language
+const savedLang = localStorage.getItem('lang');
+if (savedLang && (savedLang === 'vi' || savedLang === 'zh')) {
+  applyLang(savedLang);
+} else {
+  const browserLang = navigator.language || '';
+  if (browserLang.startsWith('vi')) applyLang('vi');
+}
+
+// ═══════════════════════════════════════════
+//  Supabase
+// ═══════════════════════════════════════════
 const CONFIG = {
-  // ── 替换为你的 Supabase 项目信息 ──
   SUPABASE_URL: 'https://jzwjssoqozrjpnwfjytb.supabase.co',
   SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp6d2pzc29xb3pyanBud2ZqeXRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ1MDQ0NDMsImV4cCI6MjEwMDA4MDQ0M30.BjogwL4Pga0208Y-0Oq68g0XQWbijr_66NA0ZjpfH80',
   START_DATE: new Date('2026-07-11T00:24:00+08:00')
 };
 
-// ═══════════════════════════════════
-//  Supabase
-// ═══════════════════════════════════
 let supabase = null;
 let supabaseReady = false;
 
 function initSupabase() {
-  if (!CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_ANON_KEY ||
-      CONFIG.SUPABASE_URL.includes('PASTE_YOUR')) return;
+  if (!CONFIG.SUPABASE_URL || CONFIG.SUPABASE_URL.includes('PASTE_YOUR')) return;
   try {
     supabase = supabaseJs.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
     supabaseReady = true;
     loadTheme();
-  } catch(e) {
-    console.warn('Supabase init failed:', e);
-  }
+  } catch(e) { console.warn('Supabase init failed:', e); }
 }
 
-// ═══════════════════════════════════
+// ═══════════════════════════════════════════
+//  Particles
+// ═══════════════════════════════════════════
+function createParticles() {
+  const container = document.getElementById('particles');
+  const symbols = ['♥','✦','·'];
+  // Reduce particles on mobile
+  const count = window.innerWidth < 480 ? 8 : 16;
+  for (let i = 0; i < count; i++) {
+    const el = document.createElement('div');
+    el.className = 'particle';
+    el.textContent = symbols[i % symbols.length];
+    el.style.left = Math.random() * 100 + '%';
+    el.style.fontSize = (6 + Math.random() * 8) + 'px';
+    el.style.setProperty('--drift', (Math.random() - 0.5) * 60 + 'px');
+    el.style.setProperty('--spin', Math.random() * 360);
+    const dur = 15 + Math.random() * 20;
+    el.style.animationDuration = dur + 's';
+    el.style.animationDelay = -(Math.random() * dur) + 's';
+    container.appendChild(el);
+  }
+}
+createParticles();
+
+// ═══════════════════════════════════════════
 //  Timer
-// ═══════════════════════════════════
+// ═══════════════════════════════════════════
 function pad(n,w){return String(n).padStart(w,'0')}
+
+let prevH='', prevM='', prevS='';
 
 function updateTimer() {
   const now = new Date();
   const diff = Math.floor((now - CONFIG.START_DATE) / 1000);
-  if (diff < 0) { document.getElementById('h').textContent='000';document.getElementById('m').textContent='00';document.getElementById('s').textContent='00';return; }
+  if (diff < 0) {
+    document.getElementById('h').textContent='000';
+    document.getElementById('m').textContent='00';
+    document.getElementById('s').textContent='00';
+    return;
+  }
   const h = Math.floor(diff/3600);
   const m = Math.floor((diff%3600)/60);
   const s = diff%60;
-  document.getElementById('h').textContent=pad(h,3);
-  document.getElementById('m').textContent=pad(m,2);
-  document.getElementById('s').textContent=pad(s,2);
+
+  const hStr = pad(h,3), mStr = pad(m,2), sStr = pad(s,2);
+
+  // Animate number changes (flip effect)
+  const hEl = document.getElementById('h');
+  const mEl = document.getElementById('m');
+  const sEl = document.getElementById('s');
+
+  if (hStr !== prevH) { hEl.textContent = hStr; if (prevH !== '') flash(hEl); }
+  if (mStr !== prevM) { mEl.textContent = mStr; if (prevM !== '') flash(mEl); }
+  if (sStr !== prevS) { sEl.textContent = sStr; if (prevS !== '') flash(sEl); }
+
+  prevH = hStr; prevM = mStr; prevS = sStr;
+
   updateDays(diff);
+}
+
+function flash(el) {
+  el.classList.remove('change');
+  void el.offsetWidth; // force reflow
+  el.classList.add('change');
+  setTimeout(() => el.classList.remove('change'), 200);
 }
 
 function updateDays(totalSec) {
@@ -298,22 +505,26 @@ function updateDays(totalSec) {
   const mod = Math.floor(totalDays%30.44);
   const yr = Math.floor(totalDays/365.25);
   const yd = Math.floor(totalDays%365.25);
-  document.getElementById('d-total').textContent=totalDays.toLocaleString()+' 天';
-  document.getElementById('d-weeks').textContent=w+' 周 '+wd+' 天';
-  document.getElementById('d-months').textContent=mo+' 个月 '+mod+' 天';
-  document.getElementById('d-years').textContent=yr+' 年 '+yd+' 天';
+  document.getElementById('d-total').textContent=totalDays.toLocaleString()+' '+t('dTotal').charAt(0);
+  document.getElementById('d-weeks').textContent=w+' tuần '+wd+' ngày';
+  document.getElementById('d-months').textContent=mo+' tháng '+mod+' ngày';
+  document.getElementById('d-years').textContent=yr+' năm '+yd+' ngày';
   document.getElementById('d-heart-num').textContent=totalDays.toLocaleString();
 }
 
-setInterval(updateTimer,1000);
+setInterval(updateTimer, 1000);
 updateTimer();
 
-// ═══════════════════════════════════
+// ═══════════════════════════════════════════
 //  Panel Management
-// ═══════════════════════════════════
+// ═══════════════════════════════════════════
+let activePanel = null;
+
 function openPanel(name) {
+  closeAllPanels();
   const el = document.getElementById(name+'-panel');
   if (!el) return;
+  activePanel = name;
   el.classList.add('active');
   if (name==='messages' && supabaseReady) loadMessages();
   if (name==='theme' && supabaseReady) loadThemePreview();
@@ -321,161 +532,244 @@ function openPanel(name) {
 
 function closePanel(name) {
   const el = document.getElementById(name+'-panel');
-  if (el) el.classList.remove('active');
+  if (el) { el.classList.remove('active'); }
+  if (activePanel === name) activePanel = null;
 }
 
-document.querySelectorAll('.overlay').forEach(el=>{
-  el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('active');});
+function closeAllPanels() {
+  document.querySelectorAll('.overlay').forEach(el => el.classList.remove('active'));
+  activePanel = null;
+}
+
+// Close overlay on background tap
+document.querySelectorAll('.overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('active'); });
 });
 
-// ═══════════════════════════════════
+// Close with Escape key
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAllPanels(); });
+
+// ═══════════════════════════════════════════
 //  Toast
-// ═══════════════════════════════════
-let toastTimer=null;
+// ═══════════════════════════════════════════
+let toastTimer = null;
 function showToast(msg) {
-  const t=document.getElementById('toast');
-  t.textContent=msg;t.classList.add('show');
-  clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2200);
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
 }
 
-// ═══════════════════════════════════
+// ═══════════════════════════════════════════
 //  Messages
-// ═══════════════════════════════════
-let selectedPhoto=null;
+// ═══════════════════════════════════════════
+let selectedPhoto = null;
 
 function handlePhotoSelect(e) {
-  const f=e.target.files[0];
-  if(!f)return;
-  if(f.size>5*1024*1024){showToast('照片太大了，请选小于 5MB 的图片');e.target.value='';return;}
-  selectedPhoto=f;
-  document.getElementById('photo-preview').style.display='flex';
-  document.getElementById('photo-name').textContent=f.name;
+  const f = e.target.files[0];
+  if (!f) return;
+  if (f.size > 5 * 1024 * 1024) {
+    showToast(t('toastPhoto'));
+    e.target.value = '';
+    return;
+  }
+  selectedPhoto = f;
+  document.getElementById('photo-preview').style.display = 'flex';
+  document.getElementById('photo-name').textContent = f.name;
 }
 
 function clearPhoto() {
-  selectedPhoto=null;
-  document.getElementById('photo-input').value='';
-  document.getElementById('photo-preview').style.display='none';
-  document.getElementById('photo-name').textContent='';
+  selectedPhoto = null;
+  document.getElementById('photo-input').value = '';
+  document.getElementById('photo-preview').style.display = 'none';
+  document.getElementById('photo-name').textContent = '';
 }
 
 async function submitMessage() {
-  const input=document.getElementById('msg-input');
-  const content=input.value.trim();
-  if(!content&&!selectedPhoto){showToast('写点什么吧 💭');return;}
-  const btn=document.getElementById('msg-submit');
-  btn.disabled=true;btn.textContent='发送中…';
+  const input = document.getElementById('msg-input');
+  const content = input.value.trim();
+  if (!content && !selectedPhoto) { showToast(t('toastEmpty')); return; }
+  const btn = document.getElementById('msg-submit');
+  btn.disabled = true;
+  document.getElementById('submit-text').textContent = t('submitSending');
   try {
-    let photoUrl=null;
-    if(selectedPhoto&&supabaseReady){
-      const ext=selectedPhoto.name.split('.').pop();
-      const fName=`${Date.now()}_${Math.random().toString(36).slice(2,8)}.${ext}`;
-      const {data:upData,error:upErr}=await supabase.storage.from('photos').upload(fName,selectedPhoto,{cacheControl:'31536000',upsert:false});
-      if(upErr)throw upErr;
-      const {data:pubData}=supabase.storage.from('photos').getPublicUrl(fName);
-      photoUrl=pubData.publicUrl;
+    let photoUrl = null;
+    if (selectedPhoto && supabaseReady) {
+      const ext = selectedPhoto.name.split('.').pop() || 'jpg';
+      const fName = Date.now() + '_' + Math.random().toString(36).slice(2, 8) + '.' + ext;
+      const { data: upData, error: upErr } = await supabase.storage.from('photos').upload(
+        fName, selectedPhoto, { cacheControl: '31536000', upsert: false }
+      );
+      if (upErr) throw upErr;
+      const { data: pubData } = supabase.storage.from('photos').getPublicUrl(fName);
+      photoUrl = pubData.publicUrl;
     }
-    if(supabaseReady){
-      const {error}=await supabase.from('messages').insert({content,photo_url:photoUrl});
-      if(error)throw error;
+    if (supabaseReady) {
+      const { error } = await supabase.from('messages').insert({
+        content, photo_url: photoUrl
+      });
+      if (error) throw error;
     }
-    input.value='';clearPhoto();
-    showToast('留言已发送 ♥');
+    input.value = '';
+    clearPhoto();
+    showToast(t('toastSent'));
     loadMessages();
-  } catch(e){
-    showToast('发送失败，请稍后再试');
+  } catch (e) {
+    showToast(t('toastFail'));
     console.error(e);
   }
-  btn.disabled=false;btn.textContent='发送';
+  btn.disabled = false;
+  document.getElementById('submit-text').textContent = t('submit');
 }
 
 async function loadMessages() {
-  const list=document.getElementById('msg-list');
-  if(!supabaseReady){list.innerHTML='<div class="msg-empty">暂未连接数据库<br>请先配置 Supabase</div>';return;}
+  const list = document.getElementById('msg-list');
+  if (!supabaseReady) {
+    list.innerHTML = '<div class="msg-empty">' + t('toastNoDB') + '</div>';
+    return;
+  }
   try {
-    const {data,error}=await supabase.from('messages').select('*').order('created_at',{ascending:false}).limit(100);
-    if(error)throw error;
-    if(!data||data.length===0){list.innerHTML='<div class="msg-empty">还没有留言<br>来写下第一条吧 💕</div>';return;}
-    list.innerHTML=data.map(m=>`
-      <div class="msg-card">
-        <div class="date">${formatDate(m.created_at)}</div>
-        <div class="content">${escapeHtml(m.content||'')}</div>
-        ${m.photo_url?`<img src="${m.photo_url}" alt="留言照片" loading="lazy" onerror="this.style.display='none'">`:''}
-      </div>
-    `).join('');
-  } catch(e){console.error(e);list.innerHTML='<div class="msg-empty">加载留言失败 🥲</div>';}
+    const { data, error } = await supabase
+      .from('messages').select('*').order('created_at', { ascending: false }).limit(100);
+    if (error) throw error;
+    if (!data || data.length === 0) {
+      list.innerHTML = '<div class="msg-empty">' + t('msgEmpty') + '</div>';
+      return;
+    }
+    list.innerHTML = data.map(m => {
+      const date = formatDate(m.created_at);
+      const content = escHtml(m.content || '');
+      const img = m.photo_url
+        ? '<img src="' + m.photo_url + '" alt="photo" loading="lazy" onerror="this.style.display=\'none\'">'
+        : '';
+      return '<div class="msg-card"><div class="date">' + date + '</div><div class="content">' + content + '</div>' + img + '</div>';
+    }).join('');
+  } catch (e) {
+    console.error(e);
+    list.innerHTML = '<div class="msg-empty">' + t('toastLoadFail') + '</div>';
+  }
 }
 
-function formatDate(d){const dt=new Date(d);const y=dt.getFullYear();const mo=pad(dt.getMonth()+1,2);const da=pad(dt.getDate(),2);const h=pad(dt.getHours(),2);const mi=pad(dt.getMinutes(),2);return y+'-'+mo+'-'+da+' '+h+':'+mi;}
+function formatDate(d) {
+  const dt = new Date(d);
+  const y = dt.getFullYear();
+  const mo = pad(dt.getMonth() + 1, 2);
+  const da = pad(dt.getDate(), 2);
+  const h = pad(dt.getHours(), 2);
+  const mi = pad(dt.getMinutes(), 2);
+  return y + '-' + mo + '-' + da + ' ' + h + ':' + mi;
+}
 
-function escapeHtml(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+function escHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
 
-// ═══════════════════════════════════
+// ═══════════════════════════════════════════
 //  Theme
-// ═══════════════════════════════════
-const defaultTheme={bg_color:'#fbf5f3',text_color:'#2d2327',accent_color:'#d4a0a7',timer_color:'#2d2327',heart_color:'#d4a0a7'};
-let currentTheme={...defaultTheme};
+// ═══════════════════════════════════════════
+const defaultTheme = {
+  bg_color: '#fbf5f3', text_color: '#2d2327', accent_color: '#d4a0a7',
+  timer_color: '#2d2327', heart_color: '#d4a0a7'
+};
+let currentTheme = { ...defaultTheme };
 
 function applyTheme(t) {
-  const r=document.documentElement.style;
-  r.setProperty('--bg',t.bg_color||defaultTheme.bg_color);
-  r.setProperty('--text',t.text_color||defaultTheme.text_color);
-  r.setProperty('--accent',t.accent_color||defaultTheme.accent_color);
-  r.setProperty('--timer-color',t.timer_color||defaultTheme.timer_color);
-  r.setProperty('--heart-color',t.heart_color||defaultTheme.heart_color);
-  document.querySelector('meta[name=theme-color]').content=t.bg_color||defaultTheme.bg_color;
-  currentTheme={...t};
+  const r = document.documentElement.style;
+  const bg = t.bg_color || defaultTheme.bg_color;
+  const text = t.text_color || defaultTheme.text_color;
+  const accent = t.accent_color || defaultTheme.accent_color;
+  const timerC = t.timer_color || defaultTheme.timer_color;
+  const heartC = t.heart_color || defaultTheme.heart_color;
+  r.setProperty('--bg', bg);
+  r.setProperty('--text', text);
+  r.setProperty('--accent', accent);
+  r.setProperty('--timer-color', timerC);
+  r.setProperty('--heart-color', heartC);
+
+  // Update meta theme-color for mobile browser chrome
+  const meta = document.getElementById('meta-theme');
+  if (meta) meta.content = bg;
+
+  // Update ambient glow colors
+  const glow = document.getElementById('ambient-glow');
+  if (glow) {
+    const accentRgba = hexToRgba(accent);
+    glow.querySelector('::before');
+  }
+
+  currentTheme = { ...t };
+}
+
+function hexToRgba(hex) {
+  if (!hex) return '212,160,167';
+  const h = hex.replace('#', '');
+  const r = parseInt(h.substring(0, 2), 16);
+  const g = parseInt(h.substring(2, 4), 16);
+  const b = parseInt(h.substring(4, 6), 16);
+  return r + ',' + g + ',' + b;
 }
 
 async function loadTheme() {
-  if(!supabaseReady)return;
+  if (!supabaseReady) return;
   try {
-    const {data,error}=await supabase.from('settings').select('value').eq('key','theme').maybeSingle();
-    if(error)throw error;
-    if(data&&data.value)applyTheme(data.value);
-  } catch(e){console.warn('Theme load failed:',e);}
+    const { data, error } = await supabase
+      .from('settings').select('value').eq('key', 'theme').maybeSingle();
+    if (error) throw error;
+    if (data && data.value) applyTheme(data.value);
+  } catch (e) { console.warn('Theme load failed:', e); }
 }
 
 function loadThemePreview() {
-  document.getElementById('t-bg').value=currentTheme.bg_color||defaultTheme.bg_color;
-  document.getElementById('t-text').value=currentTheme.text_color||defaultTheme.text_color;
-  document.getElementById('t-accent').value=currentTheme.accent_color||defaultTheme.accent_color;
-  document.getElementById('t-timer').value=currentTheme.timer_color||defaultTheme.timer_color;
-  document.getElementById('t-heart').value=currentTheme.heart_color||defaultTheme.heart_color;
+  document.getElementById('t-bg').value = currentTheme.bg_color || defaultTheme.bg_color;
+  document.getElementById('t-text').value = currentTheme.text_color || defaultTheme.text_color;
+  document.getElementById('t-accent').value = currentTheme.accent_color || defaultTheme.accent_color;
+  document.getElementById('t-timer').value = currentTheme.timer_color || defaultTheme.timer_color;
+  document.getElementById('t-heart').value = currentTheme.heart_color || defaultTheme.heart_color;
 }
 
 async function saveTheme() {
-  const t={
-    bg_color:document.getElementById('t-bg').value,
-    text_color:document.getElementById('t-text').value,
-    accent_color:document.getElementById('t-accent').value,
-    timer_color:document.getElementById('t-timer').value,
-    heart_color:document.getElementById('t-heart').value
+  const t = {
+    bg_color: document.getElementById('t-bg').value,
+    text_color: document.getElementById('t-text').value,
+    accent_color: document.getElementById('t-accent').value,
+    timer_color: document.getElementById('t-timer').value,
+    heart_color: document.getElementById('t-heart').value
   };
-  if(!supabaseReady){showToast('请先配置 Supabase');return;}
-  document.getElementById('theme-status').textContent='保存中…';
+  if (!supabaseReady) { showToast(t('toastConfig')); return; }
+  const status = document.getElementById('theme-status');
+  status.textContent = t('toastSaving');
   try {
-    const {error}=await supabase.from('settings').upsert({key:'theme',value:t},{onConflict:'key'});
-    if(error)throw error;
+    const { error } = await supabase.from('settings').upsert(
+      { key: 'theme', value: t }, { onConflict: 'key' }
+    );
+    if (error) throw error;
     applyTheme(t);
-    document.getElementById('theme-status').textContent='保存成功 ♥';
-    setTimeout(()=>document.getElementById('theme-status').textContent='',2000);
-    showToast('主题已更新');
-  } catch(e){document.getElementById('theme-status').textContent='保存失败';console.error(e);}
+    status.textContent = t('toastSaved');
+    setTimeout(() => status.textContent = '', 2200);
+    showToast(t('toastThemeSaved'));
+  } catch (e) {
+    status.textContent = t('toastFail');
+    console.error(e);
+  }
 }
 
-async function resetTheme() {
+function resetTheme() {
   applyTheme(defaultTheme);
   loadThemePreview();
-  if(supabaseReady){
-    try {await supabase.from('settings').upsert({key:'theme',value:defaultTheme},{onConflict:'key'});}catch(e){}
+  if (supabaseReady) {
+    supabase.from('settings').upsert(
+      { key: 'theme', value: defaultTheme }, { onConflict: 'key' }
+    ).catch(() => {});
   }
-  showToast('已恢复默认主题');
+  showToast(t('toastThemeReset'));
 }
 
-// ═══════════════════════════════════
+// ═══════════════════════════════════════════
 //  Init
-// ═══════════════════════════════════
+// ═══════════════════════════════════════════
 initSupabase();
 </script>
 </body>
