@@ -790,12 +790,17 @@ function hexToRgba(hex) {
 }
 
 async function loadTheme() {
+  try {
+    const local = localStorage.getItem('our_time_theme');
+    if (local) { applyTheme(JSON.parse(local)); return; }
+  } catch(e) {}
   if (!supabaseReady) return;
   try {
     const { data, error } = await sb.from('settings').select('value').eq('key', 'theme').maybeSingle();
     if (error) throw error;
-    if (data && data.value) applyTheme(data.value);
+    if (data && data.value) { applyTheme(data.value); return; }
   } catch (e) { console.warn('Theme load failed:', e); }
+  applyTheme(defaultTheme);
 }
 
 function loadThemePreview() {
@@ -817,24 +822,27 @@ async function saveTheme() {
   if (!supabaseReady) { showToast(t('toastConfig')); return; }
   const status = document.getElementById('theme-status');
   status.textContent = t('toastSaving');
+  // Save to localStorage as fallback
+  try { localStorage.setItem('our_time_theme', JSON.stringify(t)); } catch(e) {}
+  applyTheme(t);
+  // Try saving to Supabase
   try {
     const { error } = await sb.from('settings').upsert(
       { key: 'theme', value: t }, { onConflict: 'key' }
     );
     if (error) throw error;
-    applyTheme(t);
-    status.textContent = t('toastSaved');
-    setTimeout(() => status.textContent = '', 2200);
-    showToast(t('toastThemeSaved'));
-  } catch (e) {
-    status.textContent = t('toastFail');
-    console.error(e);
-  }
+  } catch (e) { console.warn('Supabase save failed, using local:', e); }
+  status.textContent = t('toastSaved');
+  setTimeout(() => status.textContent = '', 2200);
+  showToast(t('toastThemeSaved'));
 }
 
 function resetTheme() {
   applyTheme(defaultTheme);
   loadThemePreview();
+  // Clear local storage
+  try { localStorage.removeItem('our_time_theme'); } catch(e) {}
+  // Try to reset in Supabase
   if (supabaseReady) {
     sb.from('settings').upsert(
       { key: 'theme', value: defaultTheme }, { onConflict: 'key' }
