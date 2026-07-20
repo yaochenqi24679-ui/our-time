@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#fbf5f3">
+<title>我们的时间</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>♥</text></svg>">
+<style>
+:root{--bg:#fbf5f3;--text:#2d2327;--accent:#d4a0a7;--timer-color:#2d2327;--heart-color:#d4a0a7;--card-bg:rgba(255,255,255,0.72);--card-shadow:0 8px 32px rgba(0,0,0,0.06);--font:-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Helvetica Neue','PingFang SC','Noto Sans SC',sans-serif}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;display:flex;align-items:center;justify-content:center;transition:background-color .6s ease,color .6s ease;user-select:none}
+#app{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center}
+
+/* ── Timer ── */
+#timer-wrap{text-align:center;padding:20px;transition:opacity .4s ease}
+#timer{font-size:clamp(1.8rem,7.5vw,5.5rem);font-weight:200;letter-spacing:.02em;color:var(--timer-color);transition:color .6s ease;line-height:1.2;display:flex;align-items:baseline;justify-content:center;flex-wrap:wrap;gap:0}
+#timer .num{font-variant-numeric:tabular-nums;min-width:2ch;display:inline-block;text-align:right}
+#timer .num.hours{min-width:3ch}
+#timer .unit{font-size:.35em;font-weight:300;opacity:.5;margin:0 .15em 0 .06em}
+#timer .sep{font-size:.35em;font-weight:200;opacity:.3;margin:0 .08em}
+#subtitle{font-size:clamp(.75rem,2vw,1rem);font-weight:300;opacity:.35;margin-top:clamp(.6rem,2vh,1.2rem);letter-spacing:.04em;transition:color .6s ease;color:var(--text)}
+#subtitle .heart{display:inline-block;color:var(--heart-color);animation:heartbeat 2s ease-in-out infinite;transition:color .6s ease}
+@keyframes heartbeat{0%,100%{transform:scale(1)}14%{transform:scale(1.25)}28%{transform:scale(1)}42%{transform:scale(1.2)}70%{transform:scale(1)}}
+
+/* ── Menu Button ── */
+#menu-btn{position:fixed;bottom:clamp(20px,4vh,40px);right:clamp(16px,3vw,40px);z-index:50;width:44px;height:44px;border-radius:50%;background:var(--card-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(0,0,0,.04);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:opacity .3s,transform .2s,background .4s;opacity:.35;color:var(--text)}
+#menu-btn:hover{opacity:.7;transform:scale(1.06)}
+#menu-btn:active{transform:scale(.94)}
+#menu-btn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+
+/* ── Overlay ── */
+.overlay{position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.2);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);opacity:0;transition:opacity .35s ease}
+.overlay.active{display:flex;opacity:1}
+.overlay .panel{background:var(--card-bg);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);border-radius:20px;box-shadow:var(--card-shadow);width:min(92vw,440px);max-height:80vh;overflow-y:auto;padding:clamp(20px,3vw,32px);transform:translateY(20px) scale(.96);transition:transform .35s cubic-bezier(.22,1,.36,1),background .6s;color:var(--text)}
+.overlay.active .panel{transform:translateY(0) scale(1)}
+.panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.panel-header h2{font-size:1.15rem;font-weight:500;letter-spacing:.01em}
+.panel-close{width:32px;height:32px;border:none;background:rgba(0,0,0,.04);border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text);opacity:.5;transition:opacity .2s;font-size:1.1rem}
+.panel-close:hover{opacity:1}
+.panel::-webkit-scrollbar{width:4px}
+.panel::-webkit-scrollbar-thumb{background:rgba(0,0,0,.1);border-radius:2px}
+
+/* ── Menu Panel (grid) ── */
+.menu-grid{display:grid;grid-template-columns:1fr;gap:8px}
+.menu-item{display:flex;align-items:center;gap:14px;padding:14px 16px;border:none;background:rgba(255,255,255,.5);border-radius:14px;cursor:pointer;font-size:.95rem;font-family:var(--font);color:var(--text);transition:background .2s,transform .15s;text-align:left;width:100%}
+.menu-item:hover{background:rgba(255,255,255,.8)}
+.menu-item:active{transform:scale(.98)}
+.menu-item .icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
+.menu-item .icon.days{background:rgba(212,160,167,.2);color:var(--accent)}
+.menu-item .icon.messages{background:rgba(212,160,167,.2);color:var(--accent)}
+.menu-item .icon.theme{background:rgba(212,160,167,.2);color:var(--accent)}
+.menu-item .label{font-weight:450}
+.menu-item .desc{font-size:.78rem;opacity:.45;margin-top:2px}
+
+/* ── Days Panel ── */
+.days-grid{display:grid;gap:12px}
+.day-card{background:rgba(255,255,255,.5);border-radius:14px;padding:16px 18px;display:flex;align-items:center;justify-content:space-between}
+.day-card .num{font-size:1.6rem;font-weight:200;letter-spacing:-.02em}
+.day-card .label{font-size:.82rem;opacity:.5}
+.day-heart{text-align:center;margin-top:8px;font-size:1.1rem;font-weight:300;color:var(--heart-color);transition:color .6s ease}
+
+/* ── Messages Panel ── */
+.msg-list{display:flex;flex-direction:column;gap:12px;margin-bottom:16px;max-height:50vh;overflow-y:auto}
+.msg-list::-webkit-scrollbar{width:4px}
+.msg-list::-webkit-scrollbar-thumb{background:rgba(0,0,0,.08);border-radius:2px}
+.msg-empty{text-align:center;padding:40px 20px;opacity:.4;font-size:.9rem;font-weight:300;line-height:1.6}
+.msg-card{background:rgba(255,255,255,.55);border-radius:14px;padding:14px 16px;transition:background .2s}
+.msg-card .date{font-size:.72rem;opacity:.4;margin-bottom:6px}
+.msg-card .content{font-size:.9rem;line-height:1.5;word-break:break-word}
+.msg-card img{max-width:100%;border-radius:10px;margin-top:8px;display:block}
+.msg-form{display:flex;flex-direction:column;gap:10px}
+.msg-form textarea{width:100%;min-height:72px;padding:12px 14px;border:1px solid rgba(0,0,0,.06);border-radius:12px;font-size:.9rem;font-family:var(--font);background:rgba(255,255,255,.6);resize:vertical;color:var(--text);transition:border-color .2s}
+.msg-form textarea:focus{outline:none;border-color:var(--accent)}
+.msg-form textarea::placeholder{color:var(--text);opacity:.3}
+.msg-form .actions{display:flex;align-items:center;gap:10px}
+.photo-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border:1px solid rgba(0,0,0,.06);border-radius:10px;background:rgba(255,255,255,.5);cursor:pointer;font-size:.82rem;font-family:var(--font);color:var(--text);transition:background .2s}
+.photo-btn:hover{background:rgba(255,255,255,.8)}
+.photo-btn input[type=file]{display:none}
+.photo-preview{display:flex;align-items:center;gap:8px;padding:6px 10px;background:rgba(255,255,255,.4);border-radius:8px;font-size:.78rem;opacity:.6}
+.photo-preview .remove{cursor:pointer;opacity:.5;font-size:.9rem;margin-left:4px}
+.submit-btn{margin-left:auto;padding:8px 20px;border:none;border-radius:10px;background:var(--accent);color:#fff;font-size:.85rem;font-family:var(--font);cursor:pointer;font-weight:500;transition:opacity .2s,transform .15s}
+.submit-btn:hover{opacity:.85}
+.submit-btn:active{transform:scale(.97)}
+.submit-btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* ── Theme Panel ── */
+.theme-grid{display:grid;gap:14px}
+.theme-row{display:flex;align-items:center;justify-content:space-between}
+.theme-row label{font-size:.88rem;font-weight:430}
+.theme-row input[type=color]{width:40px;height:40px;border:2px solid rgba(0,0,0,.06);border-radius:10px;cursor:pointer;padding:2px;background:none}
+.theme-row input[type=color]::-webkit-color-swatch-wrapper{padding:0}
+.theme-row input[type=color]::-webkit-color-swatch{border:none;border-radius:7px}
+.theme-row select{padding:8px 14px;border:1px solid rgba(0,0,0,.06);border-radius:10px;background:rgba(255,255,255,.6);font-size:.85rem;font-family:var(--font);color:var(--text);cursor:pointer}
+.theme-row select:focus{outline:none;border-color:var(--accent)}
+.theme-actions{display:flex;gap:10px;margin-top:4px}
+.theme-actions button{flex:1;padding:10px;border:none;border-radius:10px;font-size:.85rem;font-family:var(--font);cursor:pointer;font-weight:450;transition:opacity .2s,transform .15s}
+.theme-actions button:active{transform:scale(.97)}
+.btn-save{background:var(--accent);color:#fff}
+.btn-reset{background:rgba(0,0,0,.04);color:var(--text)}
+.btn-save:hover,.btn-reset:hover{opacity:.85}
+.theme-status{text-align:center;font-size:.78rem;opacity:.5;margin-top:4px;min-height:1.2em;transition:opacity .3s}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:clamp(80px,12vh,120px);left:50%;transform:translateX(-50%) translateY(20px);background:rgba(0,0,0,.75);backdrop-filter:blur(16px);color:#fff;padding:10px 24px;border-radius:12px;font-size:.82rem;font-weight:400;opacity:0;transition:opacity .35s,transform .35s;z-index:200;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── Responsive ── */
+@media(max-width:480px){
+  #menu-btn{bottom:clamp(12px,3vh,20px);right:clamp(12px,3vw,20px);width:40px;height:40px}
+  .overlay .panel{border-radius:16px;padding:18px;max-height:85vh;width:94vw}
+  .day-card .num{font-size:1.3rem}
+}
+@media(min-width:768px){
+  #timer{font-size:clamp(3rem,6vw,6rem)}
+}
+@media(prefers-color-scheme:dark){
+  :root{--bg:#1c1a1d;--text:#e8e0e4;--accent:#c4909a;--timer-color:#e8e0e4;--heart-color:#c4909a;--card-bg:rgba(40,38,42,.82);--card-shadow:0 8px 32px rgba(0,0,0,.25)}
+  .menu-item,.day-card,.msg-card{background:rgba(255,255,255,.06)}
+  .panel-close{background:rgba(255,255,255,.08)}
+  .msg-form textarea,.theme-row select{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.08);color:var(--text)}
+  .msg-form textarea::placeholder{color:var(--text);opacity:.25}
+  .photo-btn,.submit-btn{background:var(--accent);color:#fff}
+  .photo-btn{background:rgba(255,255,255,.1)}
+  .btn-reset{background:rgba(255,255,255,.08);color:var(--text)}
+  #menu-btn{background:var(--card-bg);border-color:rgba(255,255,255,.06)}
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ═══ Timer ═══ -->
+  <div id="timer-wrap">
+    <div id="timer">
+      <span class="num hours" id="h">000</span><span class="unit">h</span><span class="sep">，</span>
+      <span class="num" id="m">00</span><span class="unit">min</span><span class="sep">，</span>
+      <span class="num" id="s">00</span><span class="unit">s</span>
+    </div>
+    <div id="subtitle"><span class="heart">♥</span> 2026.07.11 00:24 至今</div>
+  </div>
+
+  <!-- ═══ Menu Button ═══ -->
+  <button id="menu-btn" aria-label="菜单" onclick="openPanel('menu')">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+  </button>
+
+  <!-- ═══ Menu Overlay ═══ -->
+  <div class="overlay" id="menu-panel">
+    <div class="panel">
+      <div class="panel-header">
+        <h2>菜单</h2>
+        <button class="panel-close" onclick="closePanel('menu')">✕</button>
+      </div>
+      <div class="menu-grid">
+        <button class="menu-item" onclick="closePanel('menu');openPanel('days')">
+          <span class="icon days">📅</span>
+          <div><div class="label">天数换算</div><div class="desc">看看我们已经相识了多少天</div></div>
+        </button>
+        <button class="menu-item" onclick="closePanel('menu');openPanel('messages')">
+          <span class="icon messages">💬</span>
+          <div><div class="label">留言板</div><div class="desc">留下想说的话和照片</div></div>
+        </button>
+        <button class="menu-item" onclick="closePanel('menu');openPanel('theme')">
+          <span class="icon theme">🎨</span>
+          <div><div class="label">主题定制</div><div class="desc">自定义这个页面的外观</div></div>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Days Overlay ═══ -->
+  <div class="overlay" id="days-panel">
+    <div class="panel">
+      <div class="panel-header">
+        <h2>天数换算</h2>
+        <button class="panel-close" onclick="closePanel('days')">✕</button>
+      </div>
+      <div class="days-grid">
+        <div class="day-card"><span class="label">总天数</span><span class="num" id="d-total">—</span></div>
+        <div class="day-card"><span class="label">周 / 天</span><span class="num" id="d-weeks">—</span></div>
+        <div class="day-card"><span class="label">月 / 天</span><span class="num" id="d-months">—</span></div>
+        <div class="day-card"><span class="label">年 / 天</span><span class="num" id="d-years">—</span></div>
+      </div>
+      <div class="day-heart" id="day-heart-text">♥ 与你相识的第 <span id="d-heart-num">—</span> 天</div>
+    </div>
+  </div>
+
+  <!-- ═══ Messages Overlay ═══ -->
+  <div class="overlay" id="messages-panel">
+    <div class="panel">
+      <div class="panel-header">
+        <h2>留言板</h2>
+        <button class="panel-close" onclick="closePanel('messages')">✕</button>
+      </div>
+      <div class="msg-list" id="msg-list">
+        <div class="msg-empty">还没有留言<br>来写下第一条吧 💕</div>
+      </div>
+      <div class="msg-form">
+        <textarea id="msg-input" placeholder="写下你想说的话…" maxlength="2000"></textarea>
+        <div class="actions">
+          <label class="photo-btn">
+            <span>📷</span> 添加照片
+            <input type="file" accept="image/*" id="photo-input" onchange="handlePhotoSelect(event)">
+          </label>
+          <div class="photo-preview" id="photo-preview" style="display:none">
+            <span id="photo-name"></span>
+            <span class="remove" onclick="clearPhoto()">✕</span>
+          </div>
+          <button class="submit-btn" id="msg-submit" onclick="submitMessage()">发送</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Theme Overlay ═══ -->
+  <div class="overlay" id="theme-panel">
+    <div class="panel">
+      <div class="panel-header">
+        <h2>主题定制</h2>
+        <button class="panel-close" onclick="closePanel('theme')">✕</button>
+      </div>
+      <div class="theme-grid">
+        <div class="theme-row"><label>背景色</label><input type="color" id="t-bg" value="#fbf5f3"></div>
+        <div class="theme-row"><label>文字色</label><input type="color" id="t-text" value="#2d2327"></div>
+        <div class="theme-row"><label>强调色</label><input type="color" id="t-accent" value="#d4a0a7"></div>
+        <div class="theme-row"><label>计时器色</label><input type="color" id="t-timer" value="#2d2327"></div>
+        <div class="theme-row"><label>心形颜色</label><input type="color" id="t-heart" value="#d4a0a7"></div>
+      </div>
+      <div class="theme-actions">
+        <button class="btn-reset" onclick="resetTheme()">重置默认</button>
+        <button class="btn-save" onclick="saveTheme()">保存主题</button>
+      </div>
+      <div class="theme-status" id="theme-status"></div>
+    </div>
+  </div>
+
+  <!-- ═══ Toast ═══ -->
+  <div class="toast" id="toast"></div>
+</div>
+
+<script src="https://unpkg.com/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
+<script>
+// ═══════════════════════════════════
+//  Config
+// ═══════════════════════════════════
+const CONFIG = {
+  // ── 替换为你的 Supabase 项目信息 ──
+  SUPABASE_URL: 'https://jzwjssoqozrjpnwfjytb.supabase.co',
+  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp6d2pzc29xb3pyanBud2ZqeXRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ1MDQ0NDMsImV4cCI6MjEwMDA4MDQ0M30.BjogwL4Pga0208Y-0Oq68g0XQWbijr_66NA0ZjpfH80',
+  START_DATE: new Date('2026-07-11T00:24:00+08:00')
+};
+
+// ═══════════════════════════════════
+//  Supabase
+// ═══════════════════════════════════
+let supabase = null;
+let supabaseReady = false;
+
+function initSupabase() {
+  if (!CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_ANON_KEY ||
+      CONFIG.SUPABASE_URL.includes('PASTE_YOUR')) return;
+  try {
+    supabase = supabaseJs.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+    supabaseReady = true;
+    loadTheme();
+  } catch(e) {
+    console.warn('Supabase init failed:', e);
+  }
+}
+
+// ═══════════════════════════════════
+//  Timer
+// ═══════════════════════════════════
+function pad(n,w){return String(n).padStart(w,'0')}
+
+function updateTimer() {
+  const now = new Date();
+  const diff = Math.floor((now - CONFIG.START_DATE) / 1000);
+  if (diff < 0) { document.getElementById('h').textContent='000';document.getElementById('m').textContent='00';document.getElementById('s').textContent='00';return; }
+  const h = Math.floor(diff/3600);
+  const m = Math.floor((diff%3600)/60);
+  const s = diff%60;
+  document.getElementById('h').textContent=pad(h,3);
+  document.getElementById('m').textContent=pad(m,2);
+  document.getElementById('s').textContent=pad(s,2);
+  updateDays(diff);
+}
+
+function updateDays(totalSec) {
+  const totalDays = Math.floor(totalSec/86400);
+  const w = Math.floor(totalDays/7);
+  const wd = totalDays%7;
+  const mo = Math.floor(totalDays/30.44);
+  const mod = Math.floor(totalDays%30.44);
+  const yr = Math.floor(totalDays/365.25);
+  const yd = Math.floor(totalDays%365.25);
+  document.getElementById('d-total').textContent=totalDays.toLocaleString()+' 天';
+  document.getElementById('d-weeks').textContent=w+' 周 '+wd+' 天';
+  document.getElementById('d-months').textContent=mo+' 个月 '+mod+' 天';
+  document.getElementById('d-years').textContent=yr+' 年 '+yd+' 天';
+  document.getElementById('d-heart-num').textContent=totalDays.toLocaleString();
+}
+
+setInterval(updateTimer,1000);
+updateTimer();
+
+// ═══════════════════════════════════
+//  Panel Management
+// ═══════════════════════════════════
+function openPanel(name) {
+  const el = document.getElementById(name+'-panel');
+  if (!el) return;
+  el.classList.add('active');
+  if (name==='messages' && supabaseReady) loadMessages();
+  if (name==='theme' && supabaseReady) loadThemePreview();
+}
+
+function closePanel(name) {
+  const el = document.getElementById(name+'-panel');
+  if (el) el.classList.remove('active');
+}
+
+document.querySelectorAll('.overlay').forEach(el=>{
+  el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('active');});
+});
+
+// ═══════════════════════════════════
+//  Toast
+// ═══════════════════════════════════
+let toastTimer=null;
+function showToast(msg) {
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+// ═══════════════════════════════════
+//  Messages
+// ═══════════════════════════════════
+let selectedPhoto=null;
+
+function handlePhotoSelect(e) {
+  const f=e.target.files[0];
+  if(!f)return;
+  if(f.size>5*1024*1024){showToast('照片太大了，请选小于 5MB 的图片');e.target.value='';return;}
+  selectedPhoto=f;
+  document.getElementById('photo-preview').style.display='flex';
+  document.getElementById('photo-name').textContent=f.name;
+}
+
+function clearPhoto() {
+  selectedPhoto=null;
+  document.getElementById('photo-input').value='';
+  document.getElementById('photo-preview').style.display='none';
+  document.getElementById('photo-name').textContent='';
+}
+
+async function submitMessage() {
+  const input=document.getElementById('msg-input');
+  const content=input.value.trim();
+  if(!content&&!selectedPhoto){showToast('写点什么吧 💭');return;}
+  const btn=document.getElementById('msg-submit');
+  btn.disabled=true;btn.textContent='发送中…';
+  try {
+    let photoUrl=null;
+    if(selectedPhoto&&supabaseReady){
+      const ext=selectedPhoto.name.split('.').pop();
+      const fName=`${Date.now()}_${Math.random().toString(36).slice(2,8)}.${ext}`;
+      const {data:upData,error:upErr}=await supabase.storage.from('photos').upload(fName,selectedPhoto,{cacheControl:'31536000',upsert:false});
+      if(upErr)throw upErr;
+      const {data:pubData}=supabase.storage.from('photos').getPublicUrl(fName);
+      photoUrl=pubData.publicUrl;
+    }
+    if(supabaseReady){
+      const {error}=await supabase.from('messages').insert({content,photo_url:photoUrl});
+      if(error)throw error;
+    }
+    input.value='';clearPhoto();
+    showToast('留言已发送 ♥');
+    loadMessages();
+  } catch(e){
+    showToast('发送失败，请稍后再试');
+    console.error(e);
+  }
+  btn.disabled=false;btn.textContent='发送';
+}
+
+async function loadMessages() {
+  const list=document.getElementById('msg-list');
+  if(!supabaseReady){list.innerHTML='<div class="msg-empty">暂未连接数据库<br>请先配置 Supabase</div>';return;}
+  try {
+    const {data,error}=await supabase.from('messages').select('*').order('created_at',{ascending:false}).limit(100);
+    if(error)throw error;
+    if(!data||data.length===0){list.innerHTML='<div class="msg-empty">还没有留言<br>来写下第一条吧 💕</div>';return;}
+    list.innerHTML=data.map(m=>`
+      <div class="msg-card">
+        <div class="date">${formatDate(m.created_at)}</div>
+        <div class="content">${escapeHtml(m.content||'')}</div>
+        ${m.photo_url?`<img src="${m.photo_url}" alt="留言照片" loading="lazy" onerror="this.style.display='none'">`:''}
+      </div>
+    `).join('');
+  } catch(e){console.error(e);list.innerHTML='<div class="msg-empty">加载留言失败 🥲</div>';}
+}
+
+function formatDate(d){const dt=new Date(d);const y=dt.getFullYear();const mo=pad(dt.getMonth()+1,2);const da=pad(dt.getDate(),2);const h=pad(dt.getHours(),2);const mi=pad(dt.getMinutes(),2);return y+'-'+mo+'-'+da+' '+h+':'+mi;}
+
+function escapeHtml(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+
+// ═══════════════════════════════════
+//  Theme
+// ═══════════════════════════════════
+const defaultTheme={bg_color:'#fbf5f3',text_color:'#2d2327',accent_color:'#d4a0a7',timer_color:'#2d2327',heart_color:'#d4a0a7'};
+let currentTheme={...defaultTheme};
+
+function applyTheme(t) {
+  const r=document.documentElement.style;
+  r.setProperty('--bg',t.bg_color||defaultTheme.bg_color);
+  r.setProperty('--text',t.text_color||defaultTheme.text_color);
+  r.setProperty('--accent',t.accent_color||defaultTheme.accent_color);
+  r.setProperty('--timer-color',t.timer_color||defaultTheme.timer_color);
+  r.setProperty('--heart-color',t.heart_color||defaultTheme.heart_color);
+  document.querySelector('meta[name=theme-color]').content=t.bg_color||defaultTheme.bg_color;
+  currentTheme={...t};
+}
+
+async function loadTheme() {
+  if(!supabaseReady)return;
+  try {
+    const {data,error}=await supabase.from('settings').select('value').eq('key','theme').maybeSingle();
+    if(error)throw error;
+    if(data&&data.value)applyTheme(data.value);
+  } catch(e){console.warn('Theme load failed:',e);}
+}
+
+function loadThemePreview() {
+  document.getElementById('t-bg').value=currentTheme.bg_color||defaultTheme.bg_color;
+  document.getElementById('t-text').value=currentTheme.text_color||defaultTheme.text_color;
+  document.getElementById('t-accent').value=currentTheme.accent_color||defaultTheme.accent_color;
+  document.getElementById('t-timer').value=currentTheme.timer_color||defaultTheme.timer_color;
+  document.getElementById('t-heart').value=currentTheme.heart_color||defaultTheme.heart_color;
+}
+
+async function saveTheme() {
+  const t={
+    bg_color:document.getElementById('t-bg').value,
+    text_color:document.getElementById('t-text').value,
+    accent_color:document.getElementById('t-accent').value,
+    timer_color:document.getElementById('t-timer').value,
+    heart_color:document.getElementById('t-heart').value
+  };
+  if(!supabaseReady){showToast('请先配置 Supabase');return;}
+  document.getElementById('theme-status').textContent='保存中…';
+  try {
+    const {error}=await supabase.from('settings').upsert({key:'theme',value:t},{onConflict:'key'});
+    if(error)throw error;
+    applyTheme(t);
+    document.getElementById('theme-status').textContent='保存成功 ♥';
+    setTimeout(()=>document.getElementById('theme-status').textContent='',2000);
+    showToast('主题已更新');
+  } catch(e){document.getElementById('theme-status').textContent='保存失败';console.error(e);}
+}
+
+async function resetTheme() {
+  applyTheme(defaultTheme);
+  loadThemePreview();
+  if(supabaseReady){
+    try {await supabase.from('settings').upsert({key:'theme',value:defaultTheme},{onConflict:'key'});}catch(e){}
+  }
+  showToast('已恢复默认主题');
+}
+
+// ═══════════════════════════════════
+//  Init
+// ═══════════════════════════════════
+initSupabase();
+</script>
+</body>
+</html>
