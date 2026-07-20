@@ -307,7 +307,7 @@ const LANG = {
     mMessages:'留言板','mMessagesDesc':'留下想说的话和照片',
     mTheme:'主题定制','mThemeDesc':'自定义这个页面的外观',
     dTitle:'天数换算','dTotal':'总天数','dWeeks':'周 / 天','dMonths':'月 / 天','dYears':'年 / 天',
-    dHeartPre:'与你相识的第',dHeartPost:'天',
+    dDayUnit:'天',dWeekFormat:'{0} 周 {1} 天',dMonthFormat:'{0} 个月 {1} 天',dYearFormat:'{0} 年 {1} 天',dHeartPre:'与你相识的第',dHeartPost:'天',
     msgTitle:'留言板',
     msgEmpty:'还没有留言<br>来写下第一条吧 💕',
     msgPlaceholder:'写下你想说的话…',
@@ -329,7 +329,7 @@ const LANG = {
     mMessages:'Lời nhắn','mMessagesDesc':'Gửi lời nhắn và hình ảnh',
     mTheme:'Tùy chỉnh','mThemeDesc':'Tùy chỉnh giao diện',
     dTitle:'Đếm ngày','dTotal':'Tổng ngày','dWeeks':'Tuần / Ngày','dMonths':'Tháng / Ngày','dYears':'Năm / Ngày',
-    dHeartPre:'Ngày thứ',dHeartPost:'bên nhau ♥',
+    dDayUnit:' ngày',dWeekFormat:'{0} tuần {1} ngày',dMonthFormat:'{0} tháng {1} ngày',dYearFormat:'{0} năm {1} ngày',dHeartPre:'Ngày thứ',dHeartPost:'bên nhau ♥',
     msgTitle:'Lời nhắn',
     msgEmpty:'Chưa có lời nhắn nào<br>Hãy viết điều đầu tiên nhé 💕',
     msgPlaceholder:'Viết điều bạn muốn nói…',
@@ -582,10 +582,11 @@ function updateDays(totalSec) {
   const mod = Math.floor(totalDays%30.44);
   const yr = Math.floor(totalDays/365.25);
   const yd = Math.floor(totalDays%365.25);
-  document.getElementById('d-total').textContent=totalDays.toLocaleString()+' '+t('dTotal').charAt(0);
-  document.getElementById('d-weeks').textContent=w+' tuần '+wd+' ngày';
-  document.getElementById('d-months').textContent=mo+' tháng '+mod+' ngày';
-  document.getElementById('d-years').textContent=yr+' năm '+yd+' ngày';
+  function fmt(s,a,b){return s.replace('{0}',a).replace('{1}',b);}
+  document.getElementById('d-total').textContent=totalDays.toLocaleString()+' '+t('dDayUnit');
+  document.getElementById('d-weeks').textContent=fmt(t('dWeekFormat'),w,wd);
+  document.getElementById('d-months').textContent=fmt(t('dMonthFormat'),mo,mod);
+  document.getElementById('d-years').textContent=fmt(t('dYearFormat'),yr,yd);
   document.getElementById('d-heart-num').textContent=totalDays.toLocaleString();
 }
 
