@@ -293,7 +293,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
   <div class="toast" id="toast"></div>
 </div>
 
-<script src="https://unpkg.com/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
+<script>
 <script>
 // ═══════════════════════════════════════════
 //  i18n — 中文 & Tiếng Việt
@@ -418,16 +418,93 @@ const CONFIG = {
   START_DATE: new Date('2026-07-11T00:24:00+08:00')
 };
 
-let supabase = null;
+
+// ═══════════════════════════════════════════
+//  Supabase REST client (no external CDN)
+// ═══════════════════════════════════════════
+const sb = {
+  _headers() {
+    return {
+      'apikey': CONFIG.SUPABASE_ANON_KEY,
+      'Authorization': 'Bearer ' + CONFIG.SUPABASE_ANON_KEY,
+      'Content-Type': 'application/json'
+    };
+  },
+  _api(path, opts = {}) {
+    const base = CONFIG.SUPABASE_URL.replace(/\/+$/, '');
+    const url = path.startsWith('http') ? path : base + (path.startsWith('/storage/') ? '' : '/rest/v1/') + path;
+    const headers = { ...this._headers(), ...opts.headers };
+    return fetch(url, { ...opts, headers });
+  },
+  from(table) {
+    const self = this;
+    const state = { select: '*', filters: [], orderBy: null, limitBy: null, single: false };
+
+    const exec = async () => {
+      let path = table + '?select=' + encodeURIComponent(state.select);
+      if (state.orderBy) path += '&order=' + encodeURIComponent(state.orderBy);
+      if (state.limitBy) path += '&limit=' + state.limitBy;
+      for (const f of state.filters) path += '&' + f;
+      const res = await self._api(path);
+      let data = await res.json();
+      if (state.single) data = data[0] || null;
+      return { data, error: res.ok ? null : data };
+    };
+
+    const chain = {
+      select(col) { state.select = col; return chain; },
+      eq(col, val) { state.filters.push(col + '=eq.' + encodeURIComponent(String(val))); return chain; },
+      order(col, opts = {}) { state.orderBy = col + (opts.ascending === false ? '.desc' : '.asc'); return chain; },
+      limit(n) { state.limitBy = n; return chain; },
+      maybeSingle() { state.single = true; state.limitBy = 1; return exec(); },
+      then(resolve, reject) { return exec().then(resolve, reject); },
+      insert(obj) {
+        return self._api(table, {
+          method: 'POST', body: JSON.stringify(obj),
+          headers: { 'Prefer': 'return=minimal' }
+        }).then(r => r.ok ? { data: null, error: null } : r.json().then(e => ({ data: null, error: e })));
+      },
+      upsert(obj, opts = {}) {
+        let p = table;
+        const conflictKey = opts && opts.onConflict;
+        if (conflictKey) p += '?on_conflict=' + encodeURIComponent(conflictKey);
+        return self._api(p, {
+          method: 'POST', body: JSON.stringify(obj),
+          headers: { 'Prefer': 'resolution=merge-duplicates' }
+        }).then(r => r.ok ? { data: null, error: null } : r.json().then(e => ({ data: null, error: e })));
+      }
+    };
+    return chain;
+  },
+  storage: {
+    from(bucket) {
+      const base = CONFIG.SUPABASE_URL.replace(/\/+$/, '');
+      const hdrs = { 'apikey': CONFIG.SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + CONFIG.SUPABASE_ANON_KEY };
+      return {
+        async upload(path, file, opts = {}) {
+          const url = base + '/storage/v1/object/' + bucket + '/' + path;
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: { ...hdrs, 'Content-Type': file.type || 'application/octet-stream' },
+            body: file
+          });
+          const data = await res.json();
+          return { data: res.ok ? data : null, error: res.ok ? null : data };
+        },
+        getPublicUrl(path) {
+          return { data: { publicUrl: base + '/storage/v1/object/public/' + bucket + '/' + path } };
+        }
+      };
+    }
+  }
+};
+
 let supabaseReady = false;
 
 function initSupabase() {
   if (!CONFIG.SUPABASE_URL || CONFIG.SUPABASE_URL.includes('PASTE_YOUR')) return;
-  try {
-    supabase = supabaseJs.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
-    supabaseReady = true;
-    loadTheme();
-  } catch(e) { console.warn('Supabase init failed:', e); }
+  supabaseReady = true;
+  loadTheme();
 }
 
 // ═══════════════════════════════════════════
@@ -598,15 +675,15 @@ async function submitMessage() {
     if (selectedPhoto && supabaseReady) {
       const ext = selectedPhoto.name.split('.').pop() || 'jpg';
       const fName = Date.now() + '_' + Math.random().toString(36).slice(2, 8) + '.' + ext;
-      const { data: upData, error: upErr } = await supabase.storage.from('photos').upload(
+      const { data: upData, error: upErr } = await sb.storage.from('photos').upload(
         fName, selectedPhoto, { cacheControl: '31536000', upsert: false }
       );
       if (upErr) throw upErr;
-      const { data: pubData } = supabase.storage.from('photos').getPublicUrl(fName);
+      const { data: pubData } = sb.storage.from('photos').getPublicUrl(fName);
       photoUrl = pubData.publicUrl;
     }
     if (supabaseReady) {
-      const { error } = await supabase.from('messages').insert({
+      const { error } = await sb.from('messages').insert({
         content, photo_url: photoUrl
       });
       if (error) throw error;
@@ -742,7 +819,7 @@ async function saveTheme() {
   const status = document.getElementById('theme-status');
   status.textContent = t('toastSaving');
   try {
-    const { error } = await supabase.from('settings').upsert(
+    const { error } = await sb.from('settings').upsert(
       { key: 'theme', value: t }, { onConflict: 'key' }
     );
     if (error) throw error;
@@ -760,7 +837,7 @@ function resetTheme() {
   applyTheme(defaultTheme);
   loadThemePreview();
   if (supabaseReady) {
-    supabase.from('settings').upsert(
+    sb.from('settings').upsert(
       { key: 'theme', value: defaultTheme }, { onConflict: 'key' }
     ).catch(() => {});
   }
