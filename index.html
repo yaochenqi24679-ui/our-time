@@ -812,7 +812,7 @@ function loadThemePreview() {
 }
 
 async function saveTheme() {
-  const t = {
+  const theme = {
     bg_color: document.getElementById('t-bg').value,
     text_color: document.getElementById('t-text').value,
     accent_color: document.getElementById('t-accent').value,
@@ -822,18 +822,18 @@ async function saveTheme() {
   if (!supabaseReady) { showToast(t('toastConfig')); return; }
   const status = document.getElementById('theme-status');
   status.textContent = t('toastSaving');
-  // Save to localStorage as fallback
-  try { localStorage.setItem('our_time_theme', JSON.stringify(t)); } catch(e) {}
-  applyTheme(t);
-  // Try saving to Supabase
+  // Save to localStorage first (works offline)
+  try { localStorage.setItem('our_time_theme', JSON.stringify(theme)); } catch(e) {}
+  applyTheme(theme);
+  // Try saving to Supabase too
   try {
     const { error } = await sb.from('settings').upsert(
-      { key: 'theme', value: t }, { onConflict: 'key' }
+      { key: 'theme', value: theme }, { onConflict: 'key' }
     );
     if (error) throw error;
-  } catch (e) { console.warn('Supabase save failed, using local:', e); }
+  } catch (e) { console.warn('Supabase save failed:', e); }
   status.textContent = t('toastSaved');
-  setTimeout(() => status.textContent = '', 2200);
+  setTimeout(() => status.textContent = '', 2000);
   showToast(t('toastThemeSaved'));
 }
 
